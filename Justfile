@@ -1,6 +1,3 @@
-
-
-
 default:
   just --list
 
