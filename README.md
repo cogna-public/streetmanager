@@ -43,9 +43,8 @@ street_response = lookup_api.get_street(usrn="123456")
 - Python 3.12 or higher
 - Dependencies are automatically installed with the package
 
-## License
-
 <https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/geojson-swagger.json>
-<https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/work-swagger.json>
-<https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/lookup-swagger.json>
 
+<https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/work-swagger.json>
+
+<https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/lookup-swagger.json>

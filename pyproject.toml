@@ -1,6 +1,6 @@
 [project]
 name = "streetmanager"
-version = "0.1.1"
+version = "0.1.2"
 description = "A Python client library for the Street Manager API"
 readme = "README.md"
 requires-python = ">=3.12"
@@ -12,7 +12,7 @@ dependencies = [
     "python-dateutil>=2.8.2",
     "six>=1.10",
     "certifi>=2019.9.11",
-    "requests>=2.25.1"
+    "requests>=2.25.1",
 ]
 
 [build-system]

@@ -7,7 +7,16 @@ render api="work":
       -l python -o src/streetmanager/{{api}}
 
 apis:
+  rm -rf src/streetmanager/work/
+  rm -rf src/streetmanager/geojson/
+  rm -rf src/streetmanager/lookup/
   just render work
   just render geojson
   just render lookup
+  ./scripts/fix_swagger_imports.py
+  ./scripts/test_swagger_imports.py
 
+publish:
+  rm -rf dist/ build/ src/*.egg-info/
+  uv build
+  uv publish

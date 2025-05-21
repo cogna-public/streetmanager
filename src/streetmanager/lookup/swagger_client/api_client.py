@@ -22,9 +22,9 @@ import tempfile
 import six
 from six.moves.urllib.parse import quote
 
-from swagger_client.configuration import Configuration
-import swagger_client.models
-from swagger_client import rest
+from .configuration import Configuration
+from . import models
+from . import rest
 
 
 class ApiClient(object):

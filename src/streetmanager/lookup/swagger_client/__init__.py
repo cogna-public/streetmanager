@@ -15,7 +15,7 @@
 from __future__ import absolute_import
 
 # import apis into sdk package
-from .api.default_api import DefaultApi
+from .api import DefaultApi
 # import ApiClient
 from .api_client import ApiClient
 from .configuration import Configuration
