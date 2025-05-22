@@ -1,6 +1,6 @@
 [project]
 name = "streetmanager"
-version = "0.1.3"
+version = "0.1.4"
 description = "A Python client library for the Street Manager API"
 readme = "README.md"
 requires-python = ">=3.12"
