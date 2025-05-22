@@ -1,18 +1,16 @@
 [project]
 name = "streetmanager"
-version = "0.1.2"
+version = "0.1.3"
 description = "A Python client library for the Street Manager API"
 readme = "README.md"
 requires-python = ">=3.12"
-authors = [
-    {name = "Cogna Co", email = "info@cogna.co"}
-]
+authors = [{ name = "Cogna Co", email = "info@cogna.co" }]
 dependencies = [
-    "urllib3>=1.25.3",
-    "python-dateutil>=2.8.2",
-    "six>=1.10",
-    "certifi>=2019.9.11",
-    "requests>=2.25.1",
+  "urllib3>=1.25.3",
+  "python-dateutil>=2.8.2",
+  "six>=1.10",
+  "certifi>=2019.9.11",
+  "requests>=2.25.1",
 ]
 
 [build-system]
