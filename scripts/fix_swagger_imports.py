@@ -84,6 +84,18 @@ def convert_imports_in_file(file_path: Path, swagger_client_root: Path, project_
         content = re.sub(r'import\s+swagger_client\.configuration', 'from . import configuration', content) # Corrected
         content = re.sub(r'from\s+swagger_client\s+import\s+rest', 'from . import rest', content) # Added for 'from swagger_client import rest'
 
+        # After 'import swagger_client.models' becomes 'from . import models',
+        # direct references to 'swagger_client.models' need to be updated to 'models'.
+        # Example: swagger_client.models.MyModel() -> models.MyModel()
+        # Example: getattr(swagger_client.models, "MyModel") -> getattr(models, "MyModel")
+        # Example: alias = swagger_client.models -> alias = models
+        content = re.sub(r'\bswagger_client\.models\b', r'models', content)
+        
+        # Similarly for configuration:
+        # After 'import swagger_client.configuration' becomes 'from . import configuration',
+        # direct references to 'swagger_client.configuration' need to be updated to 'configuration'.
+        content = re.sub(r'\bswagger_client\.configuration\b', r'configuration', content)
+
     elif current_filename == "configuration.py" and is_in_swagger_client_root:
         # Handles src/streetmanager/<module>/swagger_client/configuration.py
         # Typically, configuration.py has no 'swagger_client.' imports.

@@ -13,8 +13,8 @@ apis:
   just render work
   just render geojson
   just render lookup
-  ./scripts/fix_swagger_imports.py
-  ./scripts/test_swagger_imports.py
+  uv run ./scripts/fix_swagger_imports.py
+  uv run ./scripts/test_swagger_imports.py
 
 publish:
   rm -rf dist/ build/ src/*.egg-info/
