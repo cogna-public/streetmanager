@@ -68,10 +68,18 @@ def main():
     test_import("streetmanager.lookup.swagger_client.api_client", "ApiClient")
     test_import("streetmanager.lookup.swagger_client.api.default_api", "DefaultApi")
 
+    # Test party API (assuming similar structure and a PartyResponse model)
+    # PLEASE ADJUST PartyResponse and its path if your model is named differently.
+    test_import("streetmanager.party.swagger_client")
+    test_import("streetmanager.party.swagger_client.models.organisation_response", "OrganisationResponse") # Adjust if model name/path is different
+    test_import("streetmanager.party.swagger_client.api_client", "ApiClient")
+    test_import("streetmanager.party.swagger_client.api.default_api", "DefaultApi")
+
     print("\nTesting README-style access patterns...\n")
     test_readme_style_access("streetmanager.work.swagger_client")
     test_readme_style_access("streetmanager.geojson.swagger_client")
     test_readme_style_access("streetmanager.lookup.swagger_client")
+    test_readme_style_access("streetmanager.party.swagger_client")
 
 if __name__ == '__main__':
     main() 

@@ -10,9 +10,11 @@ apis:
   rm -rf src/streetmanager/work/
   rm -rf src/streetmanager/geojson/
   rm -rf src/streetmanager/lookup/
+  rm -rf src/streetmanager/party/
   just render work
   just render geojson
   just render lookup
+  just render party
   uv run ./scripts/fix_swagger_imports.py
   uv run ./scripts/test_swagger_imports.py
 
