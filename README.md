@@ -1,6 +1,6 @@
 # Street Manager Python Client
 
-A Python client library for the Street Manager API, providing access to work, geojson, lookup, and party endpoints.
+A Python client library for the Street Manager API, providing access to work, geojson, lookup, party, event, and reporting endpoints.
 
 ## Installation
 
@@ -16,12 +16,16 @@ from streetmanager.work import swagger_client as work_client
 from streetmanager.geojson import swagger_client as geojson_client
 from streetmanager.lookup import swagger_client as lookup_client
 from streetmanager.party import swagger_client as party_client
+from streetmanager.event import swagger_client as event_client
+from streetmanager.reporting import swagger_client as reporting_client
 
 # Create API client instances
 work_api = work_client.DefaultApi()
 geojson_api = geojson_client.DefaultApi()
 lookup_api = lookup_client.DefaultApi()
 party_api = party_client.DefaultApi()
+event_api = event_client.DefaultApi()
+reporting_api = reporting_client.DefaultApi()
 
 # Use the APIs
 # Example: Get work details
@@ -35,6 +39,12 @@ street_response = lookup_api.get_street(usrn="123456")
 
 # Example: Get party details
 party_response = party_api.get_party(party_id="123")
+
+# Example: Get works updates
+works_updates = event_api.get_works_updates()
+
+# Example: Get reporting data
+reporting_data = reporting_api.get_reports()
 ```
 
 ## Authentication
@@ -112,6 +122,8 @@ work_response = api_instance.get_work(work_id="123")
 - GeoJSON API client for accessing geographical data
 - Lookup API client for street information
 - Party API client for managing party information
+- Event API client for getting works updates
+- Reporting API client for reporting functionality
 
 ## Requirements
 
@@ -125,3 +137,7 @@ work_response = api_instance.get_work(work_id="123")
 <https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/lookup-swagger.json>
 
 <https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/party-swagger.json>
+
+<https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/event-swagger.json>
+
+<https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/reporting-swagger.json>
