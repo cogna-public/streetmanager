@@ -87,6 +87,18 @@ def main():
     test_import("streetmanager.reporting.swagger_client.api_client", "ApiClient")
     test_import("streetmanager.reporting.swagger_client.api.default_api", "DefaultApi")
 
+    # Test export API
+    test_import("streetmanager.export.swagger_client")
+    test_import("streetmanager.export.swagger_client.models.csv_export_response", "CSVExportResponse")
+    test_import("streetmanager.export.swagger_client.api_client", "ApiClient")
+    test_import("streetmanager.export.swagger_client.api.default_api", "DefaultApi")
+
+    # Test sampling API
+    test_import("streetmanager.sampling.swagger_client")
+    test_import("streetmanager.sampling.swagger_client.models.sample_inspection_target_response", "SampleInspectionTargetResponse")
+    test_import("streetmanager.sampling.swagger_client.api_client", "ApiClient")
+    test_import("streetmanager.sampling.swagger_client.api.default_api", "DefaultApi")
+
     print("\nTesting README-style access patterns...\n")
     test_readme_style_access("streetmanager.work.swagger_client")
     test_readme_style_access("streetmanager.geojson.swagger_client")
@@ -94,6 +106,8 @@ def main():
     test_readme_style_access("streetmanager.party.swagger_client")
     test_readme_style_access("streetmanager.event.swagger_client")
     test_readme_style_access("streetmanager.reporting.swagger_client")
+    test_readme_style_access("streetmanager.export.swagger_client")
+    test_readme_style_access("streetmanager.sampling.swagger_client")
 
 if __name__ == '__main__':
     main() 

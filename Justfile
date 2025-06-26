@@ -13,12 +13,16 @@ apis:
   rm -rf src/streetmanager/party/
   rm -rf src/streetmanager/event/
   rm -rf src/streetmanager/reporting/
+  rm -rf src/streetmanager/export/
+  rm -rf src/streetmanager/sampling/
   just render work
   just render geojson
   just render lookup
   just render party
   just render event
   just render reporting
+  just render export
+  just render sampling
   uv run ./scripts/fix_swagger_imports.py
   uv run ./scripts/test_swagger_imports.py
 

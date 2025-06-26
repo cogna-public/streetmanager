@@ -168,7 +168,7 @@ def main():
     print(f"Project root identified as: {project_root}")
     base_src_dir = project_root / 'src' / 'streetmanager'
 
-    submodule_types = ["work", "geojson", "lookup", "party", "event", "reporting"]
+    submodule_types = ["work", "geojson", "lookup", "party", "event", "reporting", "export", "sampling"]
 
     for submodule_name in submodule_types:
         swagger_client_root = base_src_dir / submodule_name / "swagger_client"

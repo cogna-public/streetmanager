@@ -1,6 +1,6 @@
 # Street Manager Python Client
 
-A Python client library for the Street Manager API, providing access to work, geojson, lookup, party, event, and reporting endpoints.
+A Python client library for the Street Manager API, providing access to work, reporting, lookup, geojson, party, export, event, and sampling endpoints.
 
 ## Installation
 
@@ -13,38 +13,49 @@ uv add streetmanager
 ```python
 # Import the client modules
 from streetmanager.work import swagger_client as work_client
-from streetmanager.geojson import swagger_client as geojson_client
-from streetmanager.lookup import swagger_client as lookup_client
-from streetmanager.party import swagger_client as party_client
-from streetmanager.event import swagger_client as event_client
 from streetmanager.reporting import swagger_client as reporting_client
+from streetmanager.lookup import swagger_client as lookup_client
+from streetmanager.geojson import swagger_client as geojson_client
+from streetmanager.party import swagger_client as party_client
+from streetmanager.export import swagger_client as export_client
+from streetmanager.event import swagger_client as event_client
+from streetmanager.sampling import swagger_client as sampling_client
 
 # Create API client instances
 work_api = work_client.DefaultApi()
-geojson_api = geojson_client.DefaultApi()
-lookup_api = lookup_client.DefaultApi()
-party_api = party_client.DefaultApi()
-event_api = event_client.DefaultApi()
 reporting_api = reporting_client.DefaultApi()
+lookup_api = lookup_client.DefaultApi()
+geojson_api = geojson_client.DefaultApi()
+party_api = party_client.DefaultApi()
+export_api = export_client.DefaultApi()
+event_api = event_client.DefaultApi()
+sampling_api = sampling_client.DefaultApi()
 
 # Use the APIs
 # Example: Get work details
 work_response = work_api.get_work(work_id="123")
 
-# Example: Get GeoJSON data
-geojson_response = geojson_api.get_work_geojson(work_id="123")
+# Example: Get reporting data
+reporting_data = reporting_api.get_activity_reporting()
 
 # Example: Lookup street details
 street_response = lookup_api.get_street(usrn="123456")
 
+# Example: Get GeoJSON data
+geojson_response = geojson_api.get_work_geojson(work_id="123")
+
 # Example: Get party details
-party_response = party_api.get_party(party_id="123")
+party_response = party_api.get_organisation(organisation_id="123")
+
+# Example: Create CSV export
+export_request = export_client.PermitCSVExportRequest()
+export_response = export_api.create_permit_csv_export(permit_csv_export_request=export_request)
 
 # Example: Get works updates
 works_updates = event_api.get_works_updates()
 
-# Example: Get reporting data
-reporting_data = reporting_api.get_reports()
+# Example: Get sampling data
+sampling_data = sampling_api.get_sample_inspection_targets()
 ```
 
 ## Authentication
@@ -119,25 +130,28 @@ work_response = api_instance.get_work(work_id="123")
 ## Features
 
 - Work API client for managing street works
-- GeoJSON API client for accessing geographical data
-- Lookup API client for street information
-- Party API client for managing party information
-- Event API client for getting works updates
 - Reporting API client for reporting functionality
+- Lookup API client for street information
+- GeoJSON API client for accessing geographical data
+- Party API client for managing party information
+- Export API client for data export functionality
+- Event API client for getting works updates
+- Sampling API client for sampling functionality
 
 ## Requirements
 
 - Python 3.12 or higher
 - Dependencies are automatically installed with the package
 
-<https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/geojson-swagger.json>
+## API Documentation
 
-<https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/work-swagger.json>
+The following Swagger documentation URLs are available for each API:
 
-<https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/lookup-swagger.json>
-
-<https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/party-swagger.json>
-
-<https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/event-swagger.json>
-
-<https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/reporting-swagger.json>
+- [Work API](https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/work-swagger.json)
+- [Reporting API](https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/reporting-swagger.json)
+- [Lookup API](https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/lookup-swagger.json)
+- [GeoJSON API](https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/geojson-swagger.json)
+- [Party API](https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/party-swagger.json)
+- [Export API](https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/export-swagger.json)
+- [Event API](https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/event-swagger.json)
+- [Sampling API](https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/sampling-swagger.json)

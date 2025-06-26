@@ -1,0 +1,46 @@
+# PermitCSVExportRequest
+
+## Properties
+Name | Type | Description | Notes
+------------ | ------------- | ------------- | -------------
+**geographical_area_reference_number** | **list[str]** | Array values must be unique | [optional] 
+**street_descriptor** | **str** | Max length 100 characters | [optional] 
+**usrn** | **str** | Max length 100 characters | [optional] 
+**swa_code** | **str** | Must be provided if user is a contractor Up to four digits | [optional] 
+**export_description** | **str** | Max length 50 characters | [optional] 
+**organisation** | **str** | Max length 100 characters | [optional] 
+**status** | [**list[PermitStatus]**](PermitStatus.md) |  | [optional] 
+**work_status** | [**list[WorkStatus]**](WorkStatus.md) |  | [optional] 
+**work_category** | [**list[WorkCategory]**](WorkCategory.md) |  | [optional] 
+**lane_rental_assessment_outcome** | [**list[LaneRentalAssessmentOutcome]**](LaneRentalAssessmentOutcome.md) |  | [optional] 
+**start_date** | **datetime** |  | [optional] 
+**end_date** | **datetime** | Must occur on or after the provided start_date | [optional] 
+**work_start_date_from** | **datetime** |  | [optional] 
+**work_start_date_to** | **datetime** | Must occur on or after the provided work_start_date_from | [optional] 
+**work_end_date_from** | **datetime** |  | [optional] 
+**work_end_date_to** | **datetime** | Must occur on or after the provided work_end_date_from | [optional] 
+**start_date_created** | **datetime** |  | [optional] 
+**end_date_created** | **datetime** |  | [optional] 
+**active_permit_only** | **bool** |  | [optional] 
+**csv_export_prefix** | **AllOfPermitCSVExportRequestCsvExportPrefix** |  | [optional] 
+**is_traffic_sensitive** | **bool** |  | [optional] 
+**is_high_impact_traffic_management** | **bool** |  | [optional] 
+**has_no_final_registration** | **bool** |  | [optional] 
+**has_excavation** | **bool** |  | [optional] 
+**is_early_start** | **bool** |  | [optional] 
+**is_deemed** | **bool** |  | [optional] 
+**lane_rental_charges_not_agreed** | **bool** |  | [optional] 
+**lane_rental_charges_potentially_apply** | **bool** |  | [optional] 
+**ever_modification_requested** | **bool** |  | [optional] 
+**hs2_works_only** | **bool** |  | [optional] 
+**consultation_works_only** | **bool** |  | [optional] 
+**consent_works_only** | **bool** |  | [optional] 
+**unacknowledged_by_ha_only** | **bool** |  | [optional] 
+**is_duration_challenged** | **bool** |  | [optional] 
+**permit_reference_number** | **str** | Max length 100 characters | [optional] 
+**work_reference_number** | **str** | Max length 100 characters | [optional] 
+**reasonable_period_end_date_from** | **datetime** |  | [optional] 
+**reasonable_period_end_date_to** | **datetime** | Must occur on or after reasonable_period_end_date_from | [optional] 
+
+[[Back to Model list]](../README.md#documentation-for-models) [[Back to API list]](../README.md#documentation-for-api-endpoints) [[Back to README]](../README.md)
+
