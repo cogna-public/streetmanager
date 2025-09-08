@@ -26,6 +26,10 @@ apis:
   uv run ./scripts/fix_swagger_imports.py
   uv run ./scripts/test_swagger_imports.py
 
+# Run the smoke test suite with uv
+test:
+  uv run -m pytest -q
+
 # Create a release: bump version with uv, tag, push, and create GitHub Release
 # Usage examples:
 #   just release                 # bump patch

@@ -30,3 +30,14 @@ packages = ["src/streetmanager"]
 [project.urls]
 Homepage = "https://github.com/cogna-public/streetmanager"
 "Bug Tracker" = "https://github.com/cogna-public/streetmanager/issues"
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+# Ensure src/ is on sys.path during tests
+pythonpath = ["src"]
+addopts = "-ra"
+
+[tool.uv]
+dev-dependencies = [
+  "pytest>=8",
+]
