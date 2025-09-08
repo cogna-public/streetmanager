@@ -19,3 +19,7 @@ build-backend = "hatchling.build"
 
 [tool.hatch.build.targets.wheel]
 packages = ["src/streetmanager"]
+
+[project.urls]
+Homepage = "https://github.com/cogna-public/streetmanager"
+"Bug Tracker" = "https://github.com/cogna-public/streetmanager/issues"

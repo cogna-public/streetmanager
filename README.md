@@ -1,5 +1,10 @@
 # Street Manager Python Client
 
+[![PyPI version](https://img.shields.io/pypi/v/streetmanager.svg)](https://pypi.org/project/streetmanager/)
+[![Publish Status](https://github.com/cogna-public/streetmanager/actions/workflows/publish.yml/badge.svg)](https://github.com/cogna-public/streetmanager/actions/workflows/publish.yml)
+[![Python Versions](https://img.shields.io/pypi/pyversions/streetmanager.svg)](https://pypi.org/project/streetmanager/)
+[![License: MIT](https://img.shields.io/pypi/l/streetmanager.svg)](LICENSE)
+
 A Python client library for the Street Manager API, providing access to work, reporting, lookup, geojson, party, export, event, and sampling endpoints.
 
 ## Installation
@@ -155,3 +160,16 @@ The following Swagger documentation URLs are available for each API:
 - [Export API](https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/export-swagger.json)
 - [Event API](https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/event-swagger.json)
 - [Sampling API](https://department-for-transport-streetmanager.github.io/street-manager-docs/api-documentation/V6/V6.0/json/sampling-swagger.json)
+
+## Releasing
+
+- Bump version in `pyproject.toml` (PEP 440).
+- Commit and push to `main`.
+- Create a GitHub Release for tag `vX.Y.Z` in `cogna-public/streetmanager` (the tag can be created in the Release UI).
+- The GitHub Actions workflow builds wheels/sdist with `uv build` and publishes to PyPI via Trusted Publishing (no token required).
+
+First-time setup on PyPI
+- In PyPI project `streetmanager` → Settings → Publishing → add `cogna-public/streetmanager` as a Trusted Publisher (GitHub Actions), or approve the pending publisher after first run.
+
+Verify
+- PyPI project page: https://pypi.org/project/streetmanager/
