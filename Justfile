@@ -25,8 +25,3 @@ apis:
   just render sampling
   uv run ./scripts/fix_swagger_imports.py
   uv run ./scripts/test_swagger_imports.py
-
-publish:
-  rm -rf dist/ build/ src/*.egg-info/
-  uv build
-  uv publish
