@@ -169,6 +169,20 @@ The following Swagger documentation URLs are available for each API:
 - Create a GitHub Release for tag `vX.Y.Z` in `cogna-public/streetmanager` (the tag can be created in the Release UI).
 - The GitHub Actions workflow builds wheels/sdist with `uv build` and publishes to PyPI via Trusted Publishing (no token required).
 
+Quick release with Just
+
+Use the Justfile recipe to bump, tag, push, and create the GitHub Release:
+
+```
+just release                # bump patch
+just release minor          # bump minor
+just release major "Notes"  # bump major with release notes
+```
+
+Notes
+- Requires `gh` CLI authenticated (`gh auth status`).
+- Uses `uv version --bump` to update `pyproject.toml` and tags `vX.Y.Z`.
+
 First-time setup on PyPI
 - In PyPI project `streetmanager` → Settings → Publishing → add `cogna-public/streetmanager` as a Trusted Publisher (GitHub Actions), or approve the pending publisher after first run.
 
