@@ -1,6 +1,7 @@
 # Street Manager Python Client
 
 [![PyPI version](https://img.shields.io/pypi/v/streetmanager.svg)](https://pypi.org/project/streetmanager/)
+[![GitHub Release](https://img.shields.io/github/v/release/cogna-public/streetmanager?display_name=release)](https://github.com/cogna-public/streetmanager/releases)
 [![Publish Status](https://github.com/cogna-public/streetmanager/actions/workflows/publish.yml/badge.svg)](https://github.com/cogna-public/streetmanager/actions/workflows/publish.yml)
 [![Python Versions](https://img.shields.io/pypi/pyversions/streetmanager.svg)](https://pypi.org/project/streetmanager/)
 [![License: MIT](https://img.shields.io/pypi/l/streetmanager.svg)](LICENSE)
@@ -173,3 +174,8 @@ First-time setup on PyPI
 
 Verify
 - PyPI project page: https://pypi.org/project/streetmanager/
+
+## Changelog
+
+- See CHANGELOG.md for notable changes and release notes.
+- GitHub Releases: https://github.com/cogna-public/streetmanager/releases
