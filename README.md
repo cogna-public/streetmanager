@@ -183,10 +183,7 @@ Notes
 - Requires `gh` CLI authenticated (`gh auth status`).
 - Uses `uv version --bump` to update `pyproject.toml` and tags `vX.Y.Z`.
 
-First-time setup on PyPI
-- In PyPI project `streetmanager` → Settings → Publishing → add `cogna-public/streetmanager` as a Trusted Publisher (GitHub Actions), or approve the pending publisher after first run.
-
-Verify
+Links
 - PyPI project page: https://pypi.org/project/streetmanager/
 
 ## Changelog
