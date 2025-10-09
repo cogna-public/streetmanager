@@ -1,0 +1,71 @@
+# Automatically bump version on every push to main
+# - Bumps patch version (0.5.11 → 0.5.12)
+# - Creates version bump commit, tag, and GitHub release
+# - Triggers publish workflow via release event
+
+name: Auto Version Bump
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+jobs:
+  bump-version:
+    name: Auto-bump version and create release
+    runs-on: ubuntu-latest
+    # Skip if commit message starts with "publish:" to avoid loops
+    if: "!startsWith(github.event.head_commit.message, 'publish:')"
+    env:
+      RELEASE_TOKEN: ${{ secrets.PAT_TOKEN != '' && secrets.PAT_TOKEN || github.token }}
+      PUSH_TOKEN: ${{ github.token }}
+    steps:
+      - name: Check out repository
+        uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+          token: ${{ env.PUSH_TOKEN }}
+
+      - name: Set up uv and Python
+        uses: astral-sh/setup-uv@v3
+        with:
+          python-version: "3.13"
+
+      - name: Bump patch version
+        run: |
+          uv version --bump patch
+          NEW_VERSION=$(grep '^version = ' pyproject.toml | cut -d'"' -f2)
+          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          echo "Bumped to version: $NEW_VERSION"
+
+      - name: Commit version bump
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add pyproject.toml uv.lock
+          git commit -m "publish: bump to v${NEW_VERSION}"
+          git push origin main
+
+      - name: Create tag and release
+        env:
+          # Use PAT for release creation so publish workflow triggers; fallback to default token
+          GH_TOKEN: ${{ env.RELEASE_TOKEN }}
+        run: |
+          git tag "v${NEW_VERSION}"
+          git push origin "v${NEW_VERSION}"
+          
+          # Generate release notes from commits since last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            RELEASE_NOTES=$(git log --pretty=format:"- %s" ${LAST_TAG}..HEAD | grep -v "^- publish:")
+          else
+            RELEASE_NOTES="Initial release"
+          fi
+          
+          gh release create "v${NEW_VERSION}" \
+            --title "v${NEW_VERSION}" \
+            --notes "$RELEASE_NOTES" \
+            --repo ${{ github.repository }}

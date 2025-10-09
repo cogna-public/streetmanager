@@ -1,6 +1,7 @@
-# Publish distributions to PyPI using Trusted Publishing (OIDC)
-# - Builds wheels/sdist with uv
-# - Publishes to PyPI on GitHub Release publish
+# Publish distributions to PyPI and TestPyPI using Trusted Publishing (OIDC)
+# - Creates and uploads build artifacts on tag pushes and release publishes
+# - Publishes to TestPyPI on tag pushes (v*)
+# - Publishes to PyPI on GitHub release publish
 
 name: Publish
 
@@ -11,7 +12,7 @@ on:
 
 permissions:
   contents: read
-  id-token: write
+  id-token: write  # Required for OIDC Trusted Publishing
 
 jobs:
   build:
