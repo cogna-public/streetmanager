@@ -1,7 +1,8 @@
-# Automatically bump version on every push to main
-# - Bumps patch version (0.5.11 → 0.5.12)
-# - Creates version bump commit, tag, and GitHub release
-# - Triggers publish workflow via release event
+# Bump the version, then tag and release, on every push to main
+# - Bumps the patch version by default (0.5.11 → 0.5.12); run it by hand for minor or major
+# - Runs as the cogna-package-releaser app, the only actor allowed to push to main
+#   without review and to create v* tags
+# - The release it creates triggers publish.yml
 
 name: Auto Version Bump
 
@@ -9,63 +10,109 @@ on:
   push:
     branches:
       - main
+  workflow_dispatch:
+    inputs:
+      bump:
+        description: Version part to bump
+        type: choice
+        options:
+          - patch
+          - minor
+          - major
+        default: patch
+      notes:
+        description: Release notes (defaults to the commits since the last tag)
+        type: string
+        required: false
 
 permissions:
-  contents: write
+  contents: read
+
+concurrency:
+  group: auto-version
+  cancel-in-progress: false
 
 jobs:
   bump-version:
     name: Auto-bump version and create release
     runs-on: ubuntu-latest
-    # Skip if commit message starts with "publish:" to avoid loops
-    if: "!startsWith(github.event.head_commit.message, 'publish:')"
-    env:
-      RELEASE_TOKEN: ${{ secrets.PAT_TOKEN != '' && secrets.PAT_TOKEN || github.token }}
-      PUSH_TOKEN: ${{ github.token }}
+    # Skip the app's own "publish:" commits to avoid a loop
+    if: github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'publish:')
+    # Holds the app key; only main can deploy to it
+    environment: release
     steps:
+      - name: Create release app token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
+
+      - name: Look up the app's bot user
+        id: bot-user
+        env:
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+        run: echo "id=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)" >> "$GITHUB_OUTPUT"
+
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
           fetch-depth: 0
-          token: ${{ env.PUSH_TOKEN }}
+          persist-credentials: false
 
       - name: Set up uv and Python
-        uses: astral-sh/setup-uv@v3
+        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3.2.4
         with:
           python-version: "3.13"
+          enable-cache: false
 
-      - name: Bump patch version
+      - name: Bump version
+        env:
+          BUMP: ${{ inputs.bump || 'patch' }}
         run: |
-          uv version --bump patch
+          uv version --bump "$BUMP"
           NEW_VERSION=$(grep '^version = ' pyproject.toml | cut -d'"' -f2)
-          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
+          echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
           echo "Bumped to version: $NEW_VERSION"
 
       - name: Commit version bump
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          BOT_USER_ID: ${{ steps.bot-user.outputs.id }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${BOT_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+          # Set the token only now, after uv has run, so earlier steps can't read it
+          git remote set-url origin "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
           git add pyproject.toml uv.lock
           git commit -m "publish: bump to v${NEW_VERSION}"
           git push origin main
 
       - name: Create tag and release
         env:
-          # Use PAT for release creation so publish workflow triggers; fallback to default token
-          GH_TOKEN: ${{ env.RELEASE_TOKEN }}
+          # The app token, unlike GITHUB_TOKEN, lets the release trigger publish.yml
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          NOTES: ${{ inputs.notes }}
         run: |
           git tag "v${NEW_VERSION}"
           git push origin "v${NEW_VERSION}"
-          
-          # Generate release notes from commits since last tag
-          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$LAST_TAG" ]; then
-            RELEASE_NOTES=$(git log --pretty=format:"- %s" ${LAST_TAG}..HEAD | grep -v "^- publish:")
+
+          if [ -n "$NOTES" ]; then
+            RELEASE_NOTES="$NOTES"
           else
-            RELEASE_NOTES="Initial release"
+            # Commits since the last tag
+            LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+            if [ -n "$LAST_TAG" ]; then
+              RELEASE_NOTES=$(git log --pretty=format:"- %s" "${LAST_TAG}..HEAD" | grep -v "^- publish:")
+            else
+              RELEASE_NOTES="Initial release"
+            fi
           fi
-          
+
           gh release create "v${NEW_VERSION}" \
             --title "v${NEW_VERSION}" \
             --notes "$RELEASE_NOTES" \
-            --repo ${{ github.repository }}
+            --repo "$GITHUB_REPOSITORY"

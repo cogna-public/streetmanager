@@ -30,25 +30,11 @@ apis:
 test:
   uv run -m pytest -q
 
-# Create a release: bump version with uv, tag, push, and create GitHub Release
+# Release from main by running the Auto Version Bump workflow. Only the release
+# app can push the bump commit and v* tags, so this can't run locally.
 # Usage examples:
 #   just release                 # bump patch
 #   just release minor           # bump minor
 #   just release major "Notes"   # bump major with notes
 release bump="patch" notes="":
-  set -euo pipefail
-  # Bump version using uv
-  uv version --bump {{bump}}
-  # Extract new version from pyproject.toml
-  new_version=$(rg -n '^version\s*=\s*"([^"]+)"' -or '$1' pyproject.toml | head -n1)
-  # Commit and push
-  git add pyproject.toml
-  git commit -m "publish: bump to v${new_version}" || echo "No changes to commit"
-  git push origin main
-  # Tag and push
-  git tag "v${new_version}" || echo "Tag already exists"
-  git push origin "v${new_version}" || echo "Tag push failed (may already exist)"
-  # Prepare notes
-  if [ -z "{{notes}}" ]; then rel_notes="Release v${new_version}"; else rel_notes="{{notes}}"; fi
-  # Create GitHub Release
-  gh release create "v${new_version}" --title "v${new_version}" --notes "${rel_notes}" --repo cogna-public/streetmanager || echo "Release may already exist"
+  gh workflow run auto-version.yml --repo cogna-public/streetmanager --ref main -f bump={{bump}} -f notes="{{notes}}"
