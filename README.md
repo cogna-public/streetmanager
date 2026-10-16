@@ -170,16 +170,9 @@ The following Swagger documentation URLs are available for each API:
 
 Minor and major releases
 
-Run the Auto Version Bump workflow from `main` with the Justfile recipe:
-
-```
-just release                # bump patch
-just release minor          # bump minor
-just release major "Notes"  # bump major with release notes
-```
+Put `[minor]` or `[major]` in the PR title, for example `Add sampling API client [minor]`. The squash-merge commit takes the PR title, and the workflow bumps that part instead of the patch.
 
 Notes
-- Requires `gh` CLI authenticated (`gh auth status`); the recipe calls `gh workflow run`.
 - The repository settings (rules and the `release` and `pypi` environments) are managed in Terraform in `cogna-co/terraform`. The `release` environment holds the app's client ID (variable `RELEASE_APP_CLIENT_ID`) and private key (secret `RELEASE_APP_PRIVATE_KEY`).
 
 Links

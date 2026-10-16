@@ -29,12 +29,3 @@ apis:
 # Run the smoke test suite with uv
 test:
   uv run -m pytest -q
-
-# Release from main by running the Auto Version Bump workflow. Only the release
-# app can push the bump commit and v* tags, so this can't run locally.
-# Usage examples:
-#   just release                 # bump patch
-#   just release minor           # bump minor
-#   just release major "Notes"   # bump major with notes
-release bump="patch" notes="":
-  gh workflow run auto-version.yml --repo cogna-public/streetmanager --ref main -f bump={{bump}} -f notes="{{notes}}"

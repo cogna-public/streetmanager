@@ -6,14 +6,14 @@ Releases run in two workflows. Both are gated by repository rules and environmen
 
 ### 1. `auto-version.yml` - Automatic Version Bumping
 
-**Trigger:** Every push to `main`, or a manual run from `main` (`just release minor`)
+**Trigger:** Every push to `main`
 
 **What it does:**
-- Bumps the **patch version** (e.g., 0.5.11 → 0.5.12), or the part chosen on a manual run
+- Bumps the **patch version** (e.g., 0.5.11 → 0.5.12), or the minor or major version when the merge commit message contains `[minor]` or `[major]`
 - Runs `uv version --bump` to update `pyproject.toml` and `uv.lock`
 - Commits the version change with message `publish: bump to vX.Y.Z`
 - Creates a git tag `vX.Y.Z`
-- Creates a GitHub release with notes generated from the commits since the last tag, or the notes given on a manual run
+- Creates a GitHub release with notes generated from the commits since the last tag
 
 **Skip conditions:**
 - Commit message starts with `publish:` (to avoid loops from the app's own commits)
@@ -44,14 +44,9 @@ Merge any PR to `main`:
 4. The app creates a GitHub release
 5. `publish.yml` is triggered and publishes to PyPI
 
-### Manual Flow (For major/minor bumps)
+### Minor and major bumps
 
-Run `auto-version.yml` from `main` with the bump you want:
-
-```bash
-just release minor        # bump minor (0.5.x → 0.6.0)
-just release major "Msg"  # bump major (0.5.x → 1.0.0)
-```
+Put `[minor]` or `[major]` in the PR title, for example `Add new endpoint [minor]`. The squash-merge commit takes the PR title, so the merge bumps 0.5.x → 0.6.0 (or 1.0.0) instead of releasing a patch.
 
 Pushing a bump commit or a `v*` tag by hand is blocked by the repository rules.
 

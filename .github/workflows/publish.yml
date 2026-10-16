@@ -1,6 +1,5 @@
 # Publish distributions to PyPI using Trusted Publishing (OIDC)
-# - Builds and uploads dist artifacts on every run
-# - Publishes to PyPI when a GitHub release is published; the pypi environment
+# - Builds and publishes when a GitHub release is published; the pypi environment
 #   only accepts v* tags, which only the release app can create
 
 name: Publish
@@ -8,7 +7,6 @@ name: Publish
 on:
   release:
     types: [published]
-  workflow_dispatch: {}
 
 permissions: {}
 
@@ -42,7 +40,6 @@ jobs:
 
   publish-pypi:
     name: Publish to PyPI
-    if: github.event_name == 'release' && github.event.action == 'published'
     needs: build
     runs-on: ubuntu-latest
     permissions:

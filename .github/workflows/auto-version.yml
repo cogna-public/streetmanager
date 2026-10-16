@@ -1,5 +1,6 @@
 # Bump the version, then tag and release, on every push to main
-# - Bumps the patch version by default (0.5.11 → 0.5.12); run it by hand for minor or major
+# - Bumps the patch version (0.5.11 → 0.5.12), or minor or major when the merge
+#   commit message (the PR title) contains [minor] or [major]
 # - Runs as the cogna-package-releaser app, the only actor allowed to push to main
 #   without review and to create v* tags
 # - The release it creates triggers publish.yml
@@ -10,20 +11,6 @@ on:
   push:
     branches:
       - main
-  workflow_dispatch:
-    inputs:
-      bump:
-        description: Version part to bump
-        type: choice
-        options:
-          - patch
-          - minor
-          - major
-        default: patch
-      notes:
-        description: Release notes (defaults to the commits since the last tag)
-        type: string
-        required: false
 
 permissions:
   contents: read
@@ -37,7 +24,7 @@ jobs:
     name: Auto-bump version and create release
     runs-on: ubuntu-latest
     # Skip the app's own "publish:" commits to avoid a loop
-    if: github.event_name == 'workflow_dispatch' || !startsWith(github.event.head_commit.message, 'publish:')
+    if: "!startsWith(github.event.head_commit.message, 'publish:')"
     # Holds the app key; only main can deploy to it
     environment: release
     steps:
@@ -70,8 +57,13 @@ jobs:
 
       - name: Bump version
         env:
-          BUMP: ${{ inputs.bump || 'patch' }}
+          COMMIT_MESSAGE: ${{ github.event.head_commit.message }}
         run: |
+          case "$COMMIT_MESSAGE" in
+            *"[major]"*) BUMP=major ;;
+            *"[minor]"*) BUMP=minor ;;
+            *) BUMP=patch ;;
+          esac
           uv version --bump "$BUMP"
           NEW_VERSION=$(grep '^version = ' pyproject.toml | cut -d'"' -f2)
           echo "NEW_VERSION=$NEW_VERSION" >> "$GITHUB_ENV"
@@ -95,21 +87,16 @@ jobs:
         env:
           # The app token, unlike GITHUB_TOKEN, lets the release trigger publish.yml
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
-          NOTES: ${{ inputs.notes }}
         run: |
           git tag "v${NEW_VERSION}"
           git push origin "v${NEW_VERSION}"
 
-          if [ -n "$NOTES" ]; then
-            RELEASE_NOTES="$NOTES"
+          # Commits since the last tag
+          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
+          if [ -n "$LAST_TAG" ]; then
+            RELEASE_NOTES=$(git log --pretty=format:"- %s" "${LAST_TAG}..HEAD" | grep -v "^- publish:")
           else
-            # Commits since the last tag
-            LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-            if [ -n "$LAST_TAG" ]; then
-              RELEASE_NOTES=$(git log --pretty=format:"- %s" "${LAST_TAG}..HEAD" | grep -v "^- publish:")
-            else
-              RELEASE_NOTES="Initial release"
-            fi
+            RELEASE_NOTES="Initial release"
           fi
 
           gh release create "v${NEW_VERSION}" \
