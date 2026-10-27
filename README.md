@@ -164,13 +164,14 @@ The following Swagger documentation URLs are available for each API:
 
 ## Releasing
 
-- Every merge to `main` is released: `.github/workflows/auto-version.yml` bumps the patch version unless the PR title says `[minor]` or `[major]`, then tags `vX.Y.Z` and creates the GitHub Release as the `cogna-package-releaser` GitHub App.
+- Every merge to `main` is released: `.github/workflows/auto-version.yml` bumps the patch version unless the PR title ends with `[minor]` or `[major]`, then tags `vX.Y.Z` and creates the GitHub Release as the `cogna-package-releaser` GitHub App.
 - The release triggers `.github/workflows/publish.yml`, which builds wheels/sdist with `uv build` and publishes to PyPI via Trusted Publishing (no token required).
+- A merge that changes only `.github/`, such as a Dependabot action update, releases nothing; the next release includes it.
 - Nobody can push the bump commit or a `v*` tag by hand: the repository rules reserve both for the release app.
 
 Minor and major releases
 
-Put `[minor]` or `[major]` in the PR title, for example `Add sampling API client [minor]`. The squash-merge commit takes the PR title, and the workflow bumps that part instead of the patch.
+End the PR title with `[minor]` or `[major]`, for example `Add sampling API client [minor]`. The squash-merge commit takes the PR title, and the workflow bumps that part instead of the patch.
 
 Notes
 - The repository settings (rules and the `release` and `pypi` environments) are managed in Terraform in `cogna-co/terraform`. The `release` environment holds the app's client ID (variable `RELEASE_APP_CLIENT_ID`) and private key (secret `RELEASE_APP_PRIVATE_KEY`).

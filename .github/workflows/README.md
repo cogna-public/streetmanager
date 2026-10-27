@@ -10,23 +10,30 @@ Releases run in two workflows. Both are gated by repository rules and environmen
 
 **What it does:**
 - Checks out the tip of `main` and finds everything merged since the last `v*` tag
-- Bumps the **patch version** (e.g., 0.5.11 → 0.5.12), or the minor or major version when any of those PR titles contains `[minor]` or `[major]` (major wins)
-- Runs `uv version --bump` to update `pyproject.toml` and `uv.lock`
-- Commits the version change with message `publish: bump to vX.Y.Z`
+- Bumps the **patch version** (e.g., 0.5.11 → 0.5.12), or the minor or major version when any of those PR titles ends with `[minor]` or `[major]` (major wins)
+- Runs `uv version --bump --no-sync` to update `pyproject.toml` and `uv.lock`, in a step that has no token
+- Commits the version change with message `publish: bump to vX.Y.Z`, and the PR titles as the body
 - Creates a git tag `vX.Y.Z`
-- Creates a GitHub release listing the PR titles since the last tag
+- Creates a GitHub release whose notes are that commit body
 
-Only PR titles count: the repository squash-merges, and each squash commit's subject is its PR title. A `[major]` in a PR description or a commit message inside the PR is ignored.
+Only PR titles count: the repository squash-merges, and each squash commit's subject is its PR title. A marker counts only at the end of the title, before GitHub's ` (#N)` suffix, and in any case: `Add new endpoint [minor]` is a minor release, `Docs about [major] releases` is a patch. Titles starting with `Revert "` never count, and neither does a `[major]` in a PR description or a commit message inside the PR.
 
 **Skip conditions:**
 - The push was made by `cogna-package-releaser[bot]`, which is the app's own bump commit
 - Nothing has been merged since the last tag, for example on a re-run after a successful release
+- Only files under `.github/` changed since the last tag, for example a Dependabot action update. The next release includes those merges.
+
+With no `v*` tag on `main`, the run fails rather than guess where the last release was.
+
+The app's bump commits are found by their author, `<id>+cogna-package-releaser[bot]@users.noreply.github.com`, not by subject, so a PR titled `publish: bump to v...` is released like any other.
 
 **Authentication:**
 - The job runs in the `release` environment, which only `main` can deploy to. It mints a short-lived token for the `cogna-package-releaser` GitHub App with `actions/create-github-app-token`.
 - The app is the only actor the repository rules let push to `main` without a reviewed PR, and the only one allowed to create `v*` tags.
 - A release created with the app token triggers `publish.yml`; one created with `GITHUB_TOKEN` would not.
+- Only the steps that push, tag and release have the token. `uv` runs in a step without it, so a build dependency cannot push to `main`.
 - The token is passed to each `git push` directly and never stored in `.git/config`.
+- The workflow skips pushes by `cogna-package-releaser[bot]`, so the app's slug must stay `cogna-package-releaser`. If the app is renamed, update the `if:` in `auto-version.yml`.
 
 ### 2. `publish.yml` - PyPI Publishing
 
@@ -42,7 +49,7 @@ Only PR titles count: the repository squash-merges, and each squash commit's sub
 Merge any PR to `main`:
 
 1. Your PR gets merged to `main`
-2. `auto-version.yml` bumps the version: patch by default, or minor or major if the PR title says `[minor]` or `[major]`
+2. `auto-version.yml` bumps the version: patch by default, or minor or major if the PR title ends with `[minor]` or `[major]`
 3. The app commits the version bump and creates a tag
 4. The app creates a GitHub release
 5. `publish.yml` is triggered and publishes to PyPI
@@ -74,6 +81,12 @@ Re-run the failed **Auto Version Bump** run. Each run releases whatever is unrel
 - GitHub keeps one pending run per workflow, so a run can be cancelled when several PRs merge close together. The next run still includes the cancelled merge, and its `[minor]` or `[major]` marker.
 
 If **Publish** fails (for example, an OIDC or trusted publisher problem), fix the cause and re-run the Publish run for that release.
+
+Other first-run problems:
+
+- **The token step fails:** check that the `release` environment has `RELEASE_APP_CLIENT_ID` and `RELEASE_APP_PRIVATE_KEY`, and that the app is installed on this repository.
+- **Publish never starts:** the release must be created by the app. A release created with `GITHUB_TOKEN` does not trigger other workflows.
+- **The app key is lost or leaked:** a `cogna-public` organisation owner generates a new private key in the app's settings, deletes the old one, and replaces `RELEASE_APP_PRIVATE_KEY` in the `release` environment. The rules and environments themselves are defined in `cogna-co/terraform`, in `modules/data/github/repositories/source/definitions/`.
 
 ## Testing Changes
 

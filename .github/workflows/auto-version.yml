@@ -1,6 +1,8 @@
 # Release everything merged to main since the last v* tag
 # - Bumps the patch version (0.5.11 → 0.5.12), or minor or major when a PR title
-#   since the last release contains [minor] or [major]
+#   since the last release ends with [minor] or [major]
+# - Releases nothing when only .github/ changed, such as Dependabot action updates;
+#   the next release includes those merges
 # - Runs as the cogna-package-releaser app, the only actor allowed to push to main
 #   without review and to create v* tags
 # - The release it creates triggers publish.yml
@@ -25,10 +27,15 @@ jobs:
   bump-version:
     name: Auto-bump version and create release
     runs-on: ubuntu-latest
-    # The app's own bump push triggers this workflow; skip it to avoid a loop
+    # The app's own bump push triggers this workflow; skip it to avoid a loop. The
+    # name must match the app's slug.
     if: github.actor != 'cogna-package-releaser[bot]'
     # Holds the app key; only main can deploy to it
     environment: release
+    defaults:
+      run:
+        # Runs with -eo pipefail, so a failed git command fails the step
+        shell: bash
     steps:
       - name: Create release app token
         id: app-token
@@ -74,8 +81,10 @@ jobs:
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
           VERSION=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
-          # A bump commit for the current version that never got its tag or release
-          BUMP_COMMIT=$(git log --first-parent --format='%H %s' | awk -v s="publish: bump to v${VERSION}" '!found && $0 == $1 " " s { print $1; found = 1 }')
+          # The app's bump commit for the current version, which may lack its tag or release
+          BUMP_COMMIT=$(git log --first-parent --format='%H%x09%ae%x09%s' \
+            | awk -F'\t' -v e="$(git config user.email)" -v s="publish: bump to v${VERSION}" \
+                '!found && $2 == e && $3 == s { print $1; found = 1 }')
           if [ -z "$BUMP_COMMIT" ]; then
             echo "No bump commit for v${VERSION}; nothing to finish."
             exit 0
@@ -85,50 +94,75 @@ jobs:
             git push "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "v${VERSION}"
           fi
           if ! gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
-            gh release create "v${VERSION}" --repo "$GITHUB_REPOSITORY" --title "v${VERSION}" --generate-notes --verify-tag
+            gh release create "v${VERSION}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "v${VERSION}" \
+              --notes "$(git log -1 --format=%b "$BUMP_COMMIT")" \
+              --verify-tag
           fi
 
       - name: Choose the bump
         id: bump
         run: |
-          LAST_TAG=$(git describe --tags --abbrev=0 --match 'v*' 2>/dev/null || echo "")
-          if [ -n "$LAST_TAG" ]; then
-            RANGE="${LAST_TAG}..HEAD"
-          else
-            # No release from this repo yet: consider only the newest merge
-            RANGE="HEAD~1..HEAD"
+          echo "part=" >> "$GITHUB_OUTPUT"
+          if ! BASE=$(git describe --tags --abbrev=0 --match 'v*'); then
+            echo "::error::No v* tag on main, so there is no release to bump from."
+            exit 1
           fi
-          # Squash-only repo, so each first-parent subject is a PR title
-          SUBJECTS=$(git log --first-parent --format=%s "$RANGE" | grep -v '^publish: bump to v' || true)
+          # Squash-only repo, so each first-parent subject is a PR title. The app's
+          # bump commits are left out.
+          SUBJECTS=$(git log --first-parent --format='%ae%x09%s' "${BASE}..HEAD" \
+            | awk -F'\t' -v e="$(git config user.email)" '$1 != e { sub(/^[^\t]*\t/, ""); print }')
           if [ -z "$SUBJECTS" ]; then
-            echo "Nothing merged since ${LAST_TAG}; nothing to release."
-            echo "part=" >> "$GITHUB_OUTPUT"
+            echo "Nothing merged since ${BASE}; nothing to release."
             exit 0
           fi
-          case "$SUBJECTS" in
-            *"[major]"*) PART="major" ;;
-            *"[minor]"*) PART="minor" ;;
-            *) PART="patch" ;;
-          esac
+          if git diff --quiet "$BASE" HEAD -- . ':(exclude).github'; then
+            echo "Only .github/ changed since ${BASE}; nothing to release."
+            exit 0
+          fi
+          # A marker counts only at the end of a title, before GitHub's " (#N)".
+          # Reverts never count.
+          TITLES=$(grep -v '^Revert "' <<<"$SUBJECTS" || true)
+          if grep -Eqi '\[major\]( \(#[0-9]+\))?$' <<<"$TITLES"; then
+            PART="major"
+          elif grep -Eqi '\[minor\]( \(#[0-9]+\))?$' <<<"$TITLES"; then
+            PART="minor"
+          else
+            PART="patch"
+          fi
           echo "Releasing a ${PART} bump for:"
-          echo "$SUBJECTS"
+          # Indented, so a title starting with :: is not read as a workflow command
+          : > "${RUNNER_TEMP}/release-notes.md"
+          while IFS= read -r TITLE; do
+            printf '  %s\n' "$TITLE"
+            printf -- '- %s\n' "$TITLE" >> "${RUNNER_TEMP}/release-notes.md"
+          done <<<"$SUBJECTS"
           echo "part=${PART}" >> "$GITHUB_OUTPUT"
-          echo "last-tag=${LAST_TAG}" >> "$GITHUB_OUTPUT"
 
-      - name: Bump, tag and release
+      # No token in this step: uv and anything it runs never see it
+      - name: Bump and commit
+        id: commit
         if: steps.bump.outputs.part != ''
         env:
           PART: ${{ steps.bump.outputs.part }}
-          LAST_TAG: ${{ steps.bump.outputs.last-tag }}
+        run: |
+          # Re-locks without installing or building the project
+          uv version --bump "$PART" --no-sync
+          NEW_VERSION=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
+          git add pyproject.toml uv.lock
+          # The body is the release notes, so a finished release gets the same notes
+          git commit -m "publish: bump to v${NEW_VERSION}" -m "$(cat "${RUNNER_TEMP}/release-notes.md")"
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Push, tag and release
+        if: steps.bump.outputs.part != ''
+        env:
+          NEW_VERSION: ${{ steps.commit.outputs.version }}
           APP_TOKEN: ${{ steps.app-token.outputs.token }}
           # The app token, unlike GITHUB_TOKEN, lets the release trigger publish.yml
           GH_TOKEN: ${{ steps.app-token.outputs.token }}
         run: |
-          uv version --bump "$PART"
-          NEW_VERSION=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
-          git add pyproject.toml uv.lock
-          git commit -m "publish: bump to v${NEW_VERSION}"
-
           # Pass the token per push so it is never stored in .git/config. If main
           # moved during the run, this push is rejected; the run for the newer merge
           # releases both, or re-run this one.
@@ -136,14 +170,8 @@ jobs:
           git push "$REMOTE" HEAD:main
           git tag "v${NEW_VERSION}"
           git push "$REMOTE" "v${NEW_VERSION}"
-
-          if [ -n "$LAST_TAG" ]; then
-            RELEASE_NOTES=$(git log --first-parent --format="- %s" "${LAST_TAG}..HEAD" | grep -v '^- publish: bump to v' || true)
-          else
-            RELEASE_NOTES="First release from cogna-public/${GITHUB_REPOSITORY#*/}. Earlier versions are in CHANGELOG.md."
-          fi
           gh release create "v${NEW_VERSION}" \
             --repo "$GITHUB_REPOSITORY" \
             --title "v${NEW_VERSION}" \
-            --notes "$RELEASE_NOTES" \
+            --notes "$(git log -1 --format=%b HEAD)" \
             --verify-tag
