@@ -1,4 +1,6 @@
 # Release everything merged to main since the last v* tag
+# - Waits for test.yml to pass on the commit it releases, and releases nothing if
+#   it fails
 # - Bumps the patch version (0.5.11 → 0.5.12), or minor or major when a PR title
 #   since the last release ends with [minor] or [major]
 # - Releases nothing when only .github/ changed, such as Dependabot action updates;
@@ -18,6 +20,9 @@ on:
 
 permissions:
   contents: read
+  # For allcheckspassed to read the test results
+  checks: read
+  actions: read
 
 concurrency:
   group: auto-version
@@ -37,6 +42,30 @@ jobs:
         # Runs with -eo pipefail, so a failed git command fails the step
         shell: bash
     steps:
+      - name: Check out repository
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        with:
+          # The tip, not the triggering commit, so a queued run includes earlier bumps
+          ref: main
+          fetch-depth: 0
+          persist-credentials: false
+
+      - name: Find the commit to release
+        id: tip
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Before the token is minted, because app tokens expire after an hour
+      - name: Wait for the tests to pass
+        uses: wechuli/allcheckspassed@e4240aa9cc76fd6828ce27a71ad16c406c25adb3 # v2.5.0
+        with:
+          commit_sha: ${{ steps.tip.outputs.sha }}
+          # test.yml's jobs, as reported by GitHub Actions (app 15368), not other apps
+          checks_include: '[{"name": "^Test", "app_id": 15368}]'
+          fail_on_missing_checks: true
+          ignore_superseded_runs: true
+          # Polls once a minute for up to 30 minutes
+          retries: 30
+
       - name: Create release app token
         id: app-token
         uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
@@ -53,14 +82,6 @@ jobs:
         run: |
           BOT_USER_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
           echo "id=${BOT_USER_ID}" >> "$GITHUB_OUTPUT"
-
-      - name: Check out repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
-        with:
-          # The tip, not the triggering commit, so a queued run includes earlier bumps
-          ref: main
-          fetch-depth: 0
-          persist-credentials: false
 
       - name: Set up uv
         uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3.2.4

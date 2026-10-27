@@ -164,7 +164,7 @@ The following Swagger documentation URLs are available for each API:
 
 ## Releasing
 
-- Every merge to `main` is released: `.github/workflows/auto-version.yml` bumps the patch version unless the PR title ends with `[minor]` or `[major]`, then tags `vX.Y.Z` and creates the GitHub Release as the `cogna-package-releaser` GitHub App.
+- Every merge to `main` is released once `.github/workflows/test.yml` passes on it: `.github/workflows/auto-version.yml` waits for the tests, bumps the patch version unless the PR title ends with `[minor]` or `[major]`, then tags `vX.Y.Z` and creates the GitHub Release as the `cogna-package-releaser` GitHub App.
 - The release triggers `.github/workflows/publish.yml`, which builds wheels/sdist with `uv build` and publishes to PyPI via Trusted Publishing (no token required).
 - A merge that changes only `.github/`, such as a Dependabot action update, releases nothing; the next release includes it.
 - Nobody can push the bump commit or a `v*` tag by hand: the repository rules reserve both for the release app.
