@@ -1,7 +1,15 @@
-# Automatically bump version on every push to main
-# - Bumps patch version (0.5.11 → 0.5.12)
-# - Creates version bump commit, tag, and GitHub release
-# - Triggers publish workflow via release event
+# Release everything merged to main since the last v* tag
+# - Waits for test.yml to pass on the commit it releases, and releases nothing if
+#   it fails
+# - Bumps the patch version (0.5.11 → 0.5.12), or minor or major when a PR title
+#   since the last release ends with [minor] or [major]
+# - Releases nothing when only .github/ changed, such as Dependabot action updates;
+#   the next release includes those merges
+# - Runs as the cogna-package-releaser app, the only actor allowed to push to main
+#   without review and to create v* tags
+# - The release it creates triggers publish.yml
+# - Safe to re-run: it finishes an interrupted release, and does nothing when
+#   everything is already released
 
 name: Auto Version Bump
 
@@ -11,61 +19,180 @@ on:
       - main
 
 permissions:
-  contents: write
+  contents: read
+  # For allcheckspassed to read the test results
+  checks: read
+  actions: read
+
+concurrency:
+  group: auto-version
+  cancel-in-progress: false
 
 jobs:
   bump-version:
     name: Auto-bump version and create release
     runs-on: ubuntu-latest
-    # Skip if commit message starts with "publish:" to avoid loops
-    if: "!startsWith(github.event.head_commit.message, 'publish:')"
-    env:
-      RELEASE_TOKEN: ${{ secrets.PAT_TOKEN != '' && secrets.PAT_TOKEN || github.token }}
-      PUSH_TOKEN: ${{ github.token }}
+    # The app's own bump push triggers this workflow; skip it to avoid a loop. The
+    # name must match the app's slug.
+    if: github.actor != 'cogna-package-releaser[bot]'
+    # Holds the app key; only main can deploy to it
+    environment: release
+    defaults:
+      run:
+        # Runs with -eo pipefail, so a failed git command fails the step
+        shell: bash
     steps:
       - name: Check out repository
-        uses: actions/checkout@v4
+        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
         with:
+          # The tip, not the triggering commit, so a queued run includes earlier bumps
+          ref: main
           fetch-depth: 0
-          token: ${{ env.PUSH_TOKEN }}
+          persist-credentials: false
 
-      - name: Set up uv and Python
-        uses: astral-sh/setup-uv@v3
+      - name: Find the commit to release
+        id: tip
+        run: echo "sha=$(git rev-parse HEAD)" >> "$GITHUB_OUTPUT"
+
+      # Before the token is minted, because app tokens expire after an hour
+      - name: Wait for the tests to pass
+        uses: wechuli/allcheckspassed@e4240aa9cc76fd6828ce27a71ad16c406c25adb3 # v2.5.0
         with:
-          python-version: "3.13"
+          commit_sha: ${{ steps.tip.outputs.sha }}
+          # test.yml's jobs, as reported by GitHub Actions (app 15368), not other apps
+          checks_include: '[{"name": "^Test", "app_id": 15368}]'
+          fail_on_missing_checks: true
+          ignore_superseded_runs: true
+          # Polls once a minute for up to 30 minutes
+          retries: 30
 
-      - name: Bump patch version
-        run: |
-          uv version --bump patch
-          NEW_VERSION=$(grep '^version = ' pyproject.toml | cut -d'"' -f2)
-          echo "NEW_VERSION=$NEW_VERSION" >> $GITHUB_ENV
-          echo "Bumped to version: $NEW_VERSION"
+      - name: Create release app token
+        id: app-token
+        uses: actions/create-github-app-token@64ab729a6294000f5aa4a4bc0b73d1f32bc45510 # v3.3.0
+        with:
+          client-id: ${{ vars.RELEASE_APP_CLIENT_ID }}
+          private-key: ${{ secrets.RELEASE_APP_PRIVATE_KEY }}
+          permission-contents: write
 
-      - name: Commit version bump
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add pyproject.toml uv.lock
-          git commit -m "publish: bump to v${NEW_VERSION}"
-          git push origin main
-
-      - name: Create tag and release
+      - name: Look up the app's bot user
+        id: bot-user
         env:
-          # Use PAT for release creation so publish workflow triggers; fallback to default token
-          GH_TOKEN: ${{ env.RELEASE_TOKEN }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
         run: |
-          git tag "v${NEW_VERSION}"
-          git push origin "v${NEW_VERSION}"
-          
-          # Generate release notes from commits since last tag
-          LAST_TAG=$(git describe --tags --abbrev=0 HEAD^ 2>/dev/null || echo "")
-          if [ -n "$LAST_TAG" ]; then
-            RELEASE_NOTES=$(git log --pretty=format:"- %s" ${LAST_TAG}..HEAD | grep -v "^- publish:")
-          else
-            RELEASE_NOTES="Initial release"
+          BOT_USER_ID=$(gh api "/users/${APP_SLUG}[bot]" --jq .id)
+          echo "id=${BOT_USER_ID}" >> "$GITHUB_OUTPUT"
+
+      - name: Set up uv
+        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3.2.4
+        with:
+          enable-cache: false
+
+      - name: Configure git
+        env:
+          APP_SLUG: ${{ steps.app-token.outputs.app-slug }}
+          BOT_USER_ID: ${{ steps.bot-user.outputs.id }}
+        run: |
+          git config user.name "${APP_SLUG}[bot]"
+          git config user.email "${BOT_USER_ID}+${APP_SLUG}[bot]@users.noreply.github.com"
+
+      - name: Finish an interrupted release
+        env:
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          VERSION=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
+          # The app's bump commit for the current version, which may lack its tag or release
+          BUMP_COMMIT=$(git log --first-parent --format='%H%x09%ae%x09%s' \
+            | awk -F'\t' -v e="$(git config user.email)" -v s="publish: bump to v${VERSION}" \
+                '!found && $2 == e && $3 == s { print $1; found = 1 }')
+          if [ -z "$BUMP_COMMIT" ]; then
+            echo "No bump commit for v${VERSION}; nothing to finish."
+            exit 0
           fi
-          
+          if ! git rev-parse -q --verify "refs/tags/v${VERSION}" >/dev/null; then
+            git tag "v${VERSION}" "$BUMP_COMMIT"
+            git push "https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git" "v${VERSION}"
+          fi
+          if ! gh release view "v${VERSION}" --repo "$GITHUB_REPOSITORY" >/dev/null 2>&1; then
+            gh release create "v${VERSION}" \
+              --repo "$GITHUB_REPOSITORY" \
+              --title "v${VERSION}" \
+              --notes "$(git log -1 --format=%b "$BUMP_COMMIT")" \
+              --verify-tag
+          fi
+
+      - name: Choose the bump
+        id: bump
+        run: |
+          echo "part=" >> "$GITHUB_OUTPUT"
+          if ! BASE=$(git describe --tags --abbrev=0 --match 'v*'); then
+            echo "::error::No v* tag on main, so there is no release to bump from."
+            exit 1
+          fi
+          # Squash-only repo, so each first-parent subject is a PR title. The app's
+          # bump commits are left out.
+          SUBJECTS=$(git log --first-parent --format='%ae%x09%s' "${BASE}..HEAD" \
+            | awk -F'\t' -v e="$(git config user.email)" '$1 != e { sub(/^[^\t]*\t/, ""); print }')
+          if [ -z "$SUBJECTS" ]; then
+            echo "Nothing merged since ${BASE}; nothing to release."
+            exit 0
+          fi
+          if git diff --quiet "$BASE" HEAD -- . ':(exclude).github'; then
+            echo "Only .github/ changed since ${BASE}; nothing to release."
+            exit 0
+          fi
+          # A marker counts only at the end of a title, before GitHub's " (#N)".
+          # Reverts never count.
+          TITLES=$(grep -v '^Revert "' <<<"$SUBJECTS" || true)
+          if grep -Eqi '\[major\]( \(#[0-9]+\))?$' <<<"$TITLES"; then
+            PART="major"
+          elif grep -Eqi '\[minor\]( \(#[0-9]+\))?$' <<<"$TITLES"; then
+            PART="minor"
+          else
+            PART="patch"
+          fi
+          echo "Releasing a ${PART} bump for:"
+          # Indented, so a title starting with :: is not read as a workflow command
+          : > "${RUNNER_TEMP}/release-notes.md"
+          while IFS= read -r TITLE; do
+            printf '  %s\n' "$TITLE"
+            printf -- '- %s\n' "$TITLE" >> "${RUNNER_TEMP}/release-notes.md"
+          done <<<"$SUBJECTS"
+          echo "part=${PART}" >> "$GITHUB_OUTPUT"
+
+      # No token in this step: uv and anything it runs never see it
+      - name: Bump and commit
+        id: commit
+        if: steps.bump.outputs.part != ''
+        env:
+          PART: ${{ steps.bump.outputs.part }}
+        run: |
+          # Re-locks without installing or building the project
+          uv version --bump "$PART" --no-sync
+          NEW_VERSION=$(grep -m1 '^version = ' pyproject.toml | cut -d'"' -f2)
+          git add pyproject.toml uv.lock
+          # The body is the release notes, so a finished release gets the same notes
+          git commit -m "publish: bump to v${NEW_VERSION}" -m "$(cat "${RUNNER_TEMP}/release-notes.md")"
+          echo "version=${NEW_VERSION}" >> "$GITHUB_OUTPUT"
+
+      - name: Push, tag and release
+        if: steps.bump.outputs.part != ''
+        env:
+          NEW_VERSION: ${{ steps.commit.outputs.version }}
+          APP_TOKEN: ${{ steps.app-token.outputs.token }}
+          # The app token, unlike GITHUB_TOKEN, lets the release trigger publish.yml
+          GH_TOKEN: ${{ steps.app-token.outputs.token }}
+        run: |
+          # Pass the token per push so it is never stored in .git/config. If main
+          # moved during the run, this push is rejected; the run for the newer merge
+          # releases both, or re-run this one.
+          REMOTE="https://x-access-token:${APP_TOKEN}@github.com/${GITHUB_REPOSITORY}.git"
+          git push "$REMOTE" HEAD:main
+          git tag "v${NEW_VERSION}"
+          git push "$REMOTE" "v${NEW_VERSION}"
           gh release create "v${NEW_VERSION}" \
+            --repo "$GITHUB_REPOSITORY" \
             --title "v${NEW_VERSION}" \
-            --notes "$RELEASE_NOTES" \
-            --repo ${{ github.repository }}
+            --notes "$(git log -1 --format=%b HEAD)" \
+            --verify-tag

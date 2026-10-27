@@ -164,24 +164,17 @@ The following Swagger documentation URLs are available for each API:
 
 ## Releasing
 
-- Bump version in `pyproject.toml` (PEP 440).
-- Commit and push to `main`.
-- Create a GitHub Release for tag `vX.Y.Z` in `cogna-public/streetmanager` (the tag can be created in the Release UI).
-- The GitHub Actions workflow builds wheels/sdist with `uv build` and publishes to PyPI via Trusted Publishing (no token required).
+- Every merge to `main` is released once `.github/workflows/test.yml` passes on it: `.github/workflows/auto-version.yml` waits for the tests, bumps the patch version unless the PR title ends with `[minor]` or `[major]`, then tags `vX.Y.Z` and creates the GitHub Release as the `cogna-package-releaser` GitHub App.
+- The release triggers `.github/workflows/publish.yml`, which builds wheels/sdist with `uv build` and publishes to PyPI via Trusted Publishing (no token required).
+- A merge that changes only `.github/`, such as a Dependabot action update, releases nothing; the next release includes it.
+- Nobody can push the bump commit or a `v*` tag by hand: the repository rules reserve both for the release app.
 
-Quick release with Just
+Minor and major releases
 
-Use the Justfile recipe to bump, tag, push, and create the GitHub Release:
-
-```
-just release                # bump patch
-just release minor          # bump minor
-just release major "Notes"  # bump major with release notes
-```
+End the PR title with `[minor]` or `[major]`, for example `Add sampling API client [minor]`. The squash-merge commit takes the PR title, and the workflow bumps that part instead of the patch.
 
 Notes
-- Requires `gh` CLI authenticated (`gh auth status`).
-- Uses `uv version --bump` to update `pyproject.toml` and tags `vX.Y.Z`.
+- The repository settings (rules and the `release` and `pypi` environments) are managed in Terraform in `cogna-co/terraform`. The `release` environment holds the app's client ID (variable `RELEASE_APP_CLIENT_ID`) and private key (secret `RELEASE_APP_PRIVATE_KEY`).
 
 Links
 - PyPI project page: https://pypi.org/project/streetmanager/
