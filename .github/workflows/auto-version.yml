@@ -43,7 +43,7 @@ jobs:
         shell: bash
     steps:
       - name: Check out repository
-        uses: actions/checkout@11d5960a326750d5838078e36cf38b85af677262 # v4.4.0
+        uses: actions/checkout@3d3c42e5aac5ba805825da76410c181273ba90b1 # v7.0.1
         with:
           # The tip, not the triggering commit, so a queued run includes earlier bumps
           ref: main
@@ -56,7 +56,7 @@ jobs:
 
       # Before the token is minted, because app tokens expire after an hour
       - name: Wait for the tests to pass
-        uses: wechuli/allcheckspassed@e4240aa9cc76fd6828ce27a71ad16c406c25adb3 # v2.5.0
+        uses: wechuli/allcheckspassed@1e77c91db5ec91faa94bf441f91b91327d269ab0 # v2.6.0
         with:
           commit_sha: ${{ steps.tip.outputs.sha }}
           # test.yml's jobs, as reported by GitHub Actions (app 15368), not other apps
@@ -84,7 +84,7 @@ jobs:
           echo "id=${BOT_USER_ID}" >> "$GITHUB_OUTPUT"
 
       - name: Set up uv
-        uses: astral-sh/setup-uv@caf0cab7a618c569241d31dcd442f54681755d39 # v3.2.4
+        uses: astral-sh/setup-uv@07a047e608db84b3d8c06cd9a7c7dcc9c355c18e # v10.3.2
         with:
           enable-cache: false
 
